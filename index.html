@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>BuySignal — Buying Intent Detector</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#07070f;--surf:#0e0e1c;--card:#141424;--border:#1e1e32;--border2:#2a2a45;
+  --accent:#7c6af7;--green:#00e5a0;--red:#ff4d6d;--gold:#ffcc44;
+  --text:#ddddf5;--muted:#525270;--glow:rgba(124,106,247,.18);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 80% 50% at 50% -20%,rgba(124,106,247,.12),transparent);pointer-events:none;z-index:0}
+
+/* grid */
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(124,106,247,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(124,106,247,.025) 1px,transparent 1px);background-size:44px 44px;pointer-events:none;z-index:0}
+
+.wrap{position:relative;z-index:1;max-width:860px;margin:0 auto;padding:0 20px 80px}
+
+/* HEADER */
+header{display:flex;align-items:center;justify-content:space-between;padding:22px 0 32px;border-bottom:1px solid var(--border);margin-bottom:40px;animation:up .5s ease both}
+.logo{display:flex;align-items:center;gap:11px}
+.lmark{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),#a89cff);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 0 20px rgba(124,106,247,.5)}
+.lname{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;letter-spacing:-.5px}
+.lname span{color:var(--accent)}
+.spill{display:flex;align-items:center;gap:7px;background:var(--card);border:1px solid var(--border);border-radius:100px;padding:6px 14px;font-size:11px;color:var(--muted);cursor:pointer;transition:border-color .2s}
+.spill:hover{border-color:var(--border2)}
+.sdot{width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0;transition:background .3s,box-shadow .3s}
+.sdot.on{background:var(--green);box-shadow:0 0 7px var(--green);animation:pulse 2s infinite}
+.sdot.wait{background:var(--gold);animation:pulse .8s infinite}
+
+/* HERO */
+.hero{text-align:center;margin-bottom:40px;animation:up .6s .06s ease both}
+.hero h1{font-family:'Syne',sans-serif;font-size:clamp(26px,5vw,48px);font-weight:800;line-height:1.1;letter-spacing:-1.5px;margin-bottom:12px}
+.hero h1 em{font-style:normal;background:linear-gradient(120deg,var(--accent),#b8aaff 50%,var(--green));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero p{color:var(--muted);font-size:13px;max-width:440px;margin:0 auto;line-height:1.9}
+
+/* TRAIN BANNER */
+.tbanner{display:none;background:linear-gradient(135deg,rgba(124,106,247,.07),rgba(0,229,160,.04));border:1px solid rgba(124,106,247,.28);border-radius:14px;padding:18px 22px;margin-bottom:24px;gap:16px;flex-wrap:wrap;align-items:center;animation:up .4s ease both}
+.tbanner.show{display:flex}
+.tinfo h3{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;margin-bottom:3px}
+.tinfo p{font-size:11px;color:var(--muted);line-height:1.7}
+.tbtn{padding:10px 20px;border-radius:9px;background:var(--accent);color:#fff;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;border:none;cursor:pointer;white-space:nowrap;box-shadow:0 0 16px rgba(124,106,247,.4);transition:all .2s}
+.tbtn:hover{transform:translateY(-1px);box-shadow:0 0 24px rgba(124,106,247,.6)}
+.tbtn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+
+/* TRAIN LOG */
+.tlog{display:none;background:var(--surf);border:1px solid var(--border);border-radius:11px;padding:14px 18px;margin-bottom:22px;max-height:180px;overflow-y:auto;font-size:11px;color:var(--green);line-height:1.9;animation:up .3s ease both;white-space:pre-wrap}
+.tlog.show{display:block}
+.tlog::-webkit-scrollbar{width:3px}
+.tlog::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+
+/* TABS */
+.tabs{display:flex;gap:3px;background:var(--card);border:1px solid var(--border);border-radius:11px;padding:3px;width:fit-content;margin:0 auto 28px;animation:up .6s .1s ease both}
+.tab{padding:7px 22px;border-radius:8px;border:none;font-family:'Syne',sans-serif;font-size:12px;font-weight:700;cursor:pointer;color:var(--muted);background:transparent;transition:all .2s;letter-spacing:.3px}
+.tab.active{background:var(--accent);color:#fff;box-shadow:0 0 14px rgba(124,106,247,.45)}
+.tab:hover:not(.active){color:var(--text)}
+
+/* PANEL */
+.panel{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:26px;animation:up .6s .14s ease both}
+.tc{display:none}.tc.active{display:block}
+
+/* LABEL */
+.lbl{display:block;font-size:10px;font-weight:500;color:var(--muted);letter-spacing:1.6px;text-transform:uppercase;margin-bottom:7px}
+
+/* CHIPS */
+.chips-hd{font-size:10px;font-weight:500;color:var(--muted);letter-spacing:1.6px;text-transform:uppercase;margin-bottom:9px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px}
+.chip{padding:5px 12px;background:var(--surf);border:1px solid var(--border);border-radius:100px;font-size:11px;color:var(--muted);cursor:pointer;transition:all .2s}
+.chip:hover{border-color:var(--accent);color:var(--text);background:var(--glow)}
+
+/* TEXTAREA */
+.iwrap{position:relative;margin-bottom:12px}
+textarea{width:100%;background:var(--surf);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'DM Mono',monospace;font-size:13px;line-height:1.8;padding:14px 16px;resize:none;outline:none;transition:border-color .2s,box-shadow .2s}
+textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--glow)}
+textarea::placeholder{color:var(--muted)}
+.cc{position:absolute;bottom:10px;right:13px;font-size:10px;color:var(--muted)}
+
+/* BUTTONS */
+.brow{display:flex;gap:9px;margin-bottom:18px}
+.btn{flex:1;padding:12px 16px;border-radius:10px;font-family:'Syne',sans-serif;font-size:13px;font-weight:700;cursor:pointer;border:none;transition:all .2s;letter-spacing:.2px}
+.bp{background:var(--accent);color:#fff;box-shadow:0 0 16px rgba(124,106,247,.32)}
+.bp:hover{transform:translateY(-1px);box-shadow:0 0 24px rgba(124,106,247,.5)}
+.bp:active{transform:translateY(0)}
+.bp:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.bg{background:var(--surf);color:var(--muted);border:1px solid var(--border);flex:0 0 auto;padding:12px 16px}
+.bg:hover{color:var(--text);border-color:var(--border2)}
+
+/* ERROR */
+.err{display:none;background:rgba(255,77,109,.07);border:1px solid rgba(255,77,109,.28);border-radius:10px;padding:11px 14px;color:var(--red);font-size:12px;margin-bottom:12px}
+.err.show{display:block}
+
+/* RESULT */
+.rcard{display:none;background:var(--surf);border:1px solid var(--border);border-radius:15px;padding:20px}
+.rcard.show{display:block;animation:pop .35s cubic-bezier(.34,1.56,.64,1) both}
+.rcard.ri{border-color:rgba(0,229,160,.32);box-shadow:0 0 24px rgba(0,229,160,.06)}
+.rcard.rn{border-color:rgba(255,77,109,.32);box-shadow:0 0 24px rgba(255,77,109,.06)}
+.rtop{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;flex-wrap:wrap;gap:10px}
+.verd{display:flex;align-items:center;gap:11px}
+.vico{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:21px}
+.ri .vico{background:rgba(0,229,160,.1)}
+.rn .vico{background:rgba(255,77,109,.1)}
+.vlbl{font-family:'Syne',sans-serif;font-size:19px;font-weight:800}
+.ri .vlbl{color:var(--green)}
+.rn .vlbl{color:var(--red)}
+.vsub{font-size:11px;color:var(--muted);margin-top:2px}
+.confn{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;padding:7px 14px;background:var(--card);border-radius:9px}
+.ri .confn{color:var(--green)}
+.rn .confn{color:var(--red)}
+
+/* BARS */
+.bar-row{display:flex;align-items:center;gap:11px;margin-bottom:9px}
+.bname{font-size:11px;color:var(--muted);width:118px;flex-shrink:0}
+.btrack{flex:1;height:5px;background:var(--card);border-radius:100px;overflow:hidden}
+.bfill{height:100%;border-radius:100px;transition:width .7s cubic-bezier(.4,0,.2,1);width:0%}
+.bfg{background:linear-gradient(90deg,var(--green),#00c887)}
+.bfr{background:linear-gradient(90deg,var(--red),#e0003a)}
+.bpct{font-size:11px;color:var(--text);width:40px;text-align:right;flex-shrink:0}
+
+/* CLEANED */
+.cbox{margin-top:13px;padding:10px 14px;background:var(--card);border-radius:9px;border:1px solid var(--border)}
+.clbl{font-size:9px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.cval{font-size:11px;color:var(--accent);line-height:1.7;font-style:italic}
+
+/* BATCH STATS */
+.bstats{display:none;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px}
+.bstats.show{display:grid}
+.bstat{background:var(--surf);border:1px solid var(--border);border-radius:12px;padding:14px;text-align:center}
+.bsn{font-family:'Syne',sans-serif;font-size:24px;font-weight:800;line-height:1;margin-bottom:3px}
+.bsl{font-size:9px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+
+/* BATCH ROWS */
+.blist{display:flex;flex-direction:column;gap:7px;margin-top:16px}
+.bitem{display:flex;align-items:center;gap:11px;padding:11px 14px;background:var(--surf);border:1px solid var(--border);border-radius:10px;animation:up .25s ease both}
+.bitem.bi{border-left:3px solid var(--green)}
+.bitem.bn{border-left:3px solid var(--red)}
+.bico{font-size:15px;flex-shrink:0}
+.bmsg{flex:1;font-size:12px;color:var(--text)}
+.bcnf{font-family:'Syne',sans-serif;font-size:11px;font-weight:700;flex-shrink:0}
+.bi .bcnf{color:var(--green)}
+.bn .bcnf{color:var(--red)}
+
+/* HISTORY */
+.hsec{margin-top:26px;display:none}
+.hsec.show{display:block}
+.hhd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.htitle{font-size:10px;font-weight:500;color:var(--muted);letter-spacing:1.6px;text-transform:uppercase}
+.hclr{font-size:10px;color:var(--muted);background:none;border:none;cursor:pointer;font-family:'DM Mono',monospace;padding:3px 7px;border-radius:5px;transition:color .2s}
+.hclr:hover{color:var(--red)}
+.hlist{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto}
+.hlist::-webkit-scrollbar{width:3px}
+.hlist::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+.hitem{display:flex;align-items:center;gap:9px;padding:8px 12px;background:var(--surf);border:1px solid var(--border);border-radius:8px;cursor:pointer;transition:border-color .2s;animation:up .2s ease both}
+.hitem:hover{border-color:var(--accent)}
+.hdot2{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.hdot2.g{background:var(--green)}
+.hdot2.r{background:var(--red)}
+.hmsg{flex:1;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hpct{font-size:10px;color:var(--muted);flex-shrink:0}
+
+/* SPINNER */
+.sp{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.2);border-top-color:#fff;border-radius:50%;animation:spin .5s linear infinite;vertical-align:middle;margin-right:6px}
+
+/* ANIMS */
+@keyframes up  {from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop {from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+
+@media(max-width:520px){
+  .panel{padding:16px}
+  header{flex-direction:column;align-items:flex-start;gap:10px}
+  .bstats{gap:6px}
+  .bsn{font-size:20px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="lmark">⚡</div>
+    <div class="lname">Buy<span>Signal</span></div>
+  </div>
+  <div class="spill" onclick="checkStatus(true)" title="Click to refresh">
+    <div class="sdot" id="sdot"></div>
+    <span id="stxt">Connecting...</span>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <h1>Detect <em>Buying Intent</em><br/>from Customer Messages <br> -Akash209</h1>
+  <p>Paste any customer message and instantly predict whether they show purchase intent — powered by TF-IDF + Machine Learning.</p>
+</div>
+
+<!-- TRAIN BANNER -->
+<div class="tbanner" id="tbanner">
+  <div class="tinfo">
+    <h3>🧠 Model Not Trained Yet</h3>
+    <p>Click the button to download the dataset and train the model.<br/>Takes about 3–5 minutes. Only needed once.</p>
+  </div>
+  <button class="tbtn" id="tbtn" onclick="trainModel()">Train Model Now</button>
+</div>
+<div class="tlog" id="tlog"></div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('single',this)">Single Message</button>
+  <button class="tab" onclick="switchTab('batch',this)">Batch Analysis</button>
+</div>
+
+<!-- PANEL -->
+<div class="panel">
+
+  <!-- SINGLE -->
+  <div class="tc active" id="tc-single">
+    <div class="chips-hd">Quick Examples — Click to Load</div>
+    <div class="chips" id="chips"></div>
+    <label class="lbl">Customer Message</label>
+    <div class="iwrap">
+      <textarea id="sinput" rows="4"
+        placeholder="Type a customer message e.g: How much does this cost? What are the delivery options?..."
+        oninput="updateCC(this)" maxlength="500"></textarea>
+      <span class="cc" id="cc">0 / 500</span>
+    </div>
+    <div class="brow">
+      <button class="btn bp" id="abtn" onclick="analyzeSingle()">Analyze Intent</button>
+      <button class="btn bg" onclick="clearSingle()">Clear</button>
+    </div>
+    <div class="err" id="serr"></div>
+    <div class="rcard" id="rcard">
+      <div class="rtop">
+        <div class="verd">
+          <div class="vico" id="vico"></div>
+          <div>
+            <div class="vlbl" id="vlbl"></div>
+            <div class="vsub" id="vsub"></div>
+          </div>
+        </div>
+        <div class="confn" id="confn"></div>
+      </div>
+      <div>
+        <div class="bar-row"><div class="bname">Not Interested</div><div class="btrack"><div class="bfill bfr" id="br0"></div></div><div class="bpct" id="bp0"></div></div>
+        <div class="bar-row"><div class="bname">Interested</div><div class="btrack"><div class="bfill bfg" id="br1"></div></div><div class="bpct" id="bp1"></div></div>
+      </div>
+      <div class="cbox"><div class="clbl">Processed text (after cleaning)</div><div class="cval" id="cval"></div></div>
+    </div>
+    <div class="hsec" id="hsec">
+      <div class="hhd"><div class="htitle">Recent Predictions</div><button class="hclr" onclick="clearHist()">Clear</button></div>
+      <div class="hlist" id="hlist"></div>
+    </div>
+  </div>
+
+  <!-- BATCH -->
+  <div class="tc" id="tc-batch">
+    <div class="bstats" id="bstats">
+      <div class="bstat"><div class="bsn" id="st0" style="color:var(--accent)">0</div><div class="bsl">Total</div></div>
+      <div class="bstat"><div class="bsn" id="st1" style="color:var(--green)">0</div><div class="bsl">Interested</div></div>
+      <div class="bstat"><div class="bsn" id="st2" style="color:var(--red)">0</div><div class="bsl">Not Interested</div></div>
+    </div>
+    <label class="lbl">Messages — One Per Line (Max 50)</label>
+    <div class="iwrap">
+      <textarea id="binput" rows="10"
+        placeholder="How much does this product cost?&#10;I need to reset my password&#10;What are the delivery options?&#10;Can I pay by card?&#10;When will my order arrive?&#10;I want to cancel my account"></textarea>
+    </div>
+    <div class="brow">
+      <button class="btn bp" id="bbtn" onclick="analyzeBatch()">Analyze All</button>
+      <button class="btn bg" onclick="clearBatch()">Clear</button>
+    </div>
+    <div class="err" id="berr"></div>
+    <div class="blist" id="blist"></div>
+  </div>
+
+</div><!-- /panel -->
+</div><!-- /wrap -->
+
+<script>
+const EX=["How much does this cost?","What are the delivery options?","Do you accept credit cards?","I want to place an order","When will my order arrive?","How do I reset my password?","Is this item in stock?","Can I get a refund?","What colors are available?","I want to cancel my account","Do you ship internationally?","Is there a discount?"];
+let hist=[];
+try{hist=JSON.parse(localStorage.getItem('bs_hist')||'[]');}catch{}
+
+window.addEventListener('DOMContentLoaded',()=>{
+  // render chips
+  const c=document.getElementById('chips');
+  EX.forEach(m=>{const b=document.createElement('button');b.className='chip';b.textContent=m;b.onclick=()=>{document.getElementById('sinput').value=m;updateCC(document.getElementById('sinput'));};c.appendChild(b);});
+  renderHist();
+  checkStatus(false);
+  setInterval(()=>checkStatus(false),8000);
+});
+
+async function checkStatus(click){
+  const dot=document.getElementById('sdot'),txt=document.getElementById('stxt');
+  dot.className='sdot wait'; txt.textContent='Checking...';
+  try{
+    const r=await fetch('/status'),d=await r.json();
+    if(d.model_loaded){
+      dot.className='sdot on'; txt.textContent='Model Online';
+      document.getElementById('tbanner').classList.remove('show');
+    } else {
+      dot.className='sdot'; txt.textContent='Model Not Loaded';
+      document.getElementById('tbanner').classList.add('show');
+    }
+  } catch{
+    dot.className='sdot'; txt.textContent='Server Offline';
+    if(click) alert('Cannot reach server.\n\nMake sure you:\n1. Double-clicked START.bat\n2. Saw "Server running" message\n3. Are opening http://localhost:5000');
+  }
+}
+
+async function trainModel(){
+  const btn=document.getElementById('tbtn'),log=document.getElementById('tlog');
+  btn.disabled=true; btn.innerHTML='<span class="sp"></span>Training... (~3-5 min)';
+  log.className='tlog show'; log.textContent='Starting training...\n';
+  try{
+    const r=await fetch('/train',{method:'POST'}),d=await r.json();
+    log.textContent=(d.log||'No log output.')+'\n';
+    if(d.success){
+      log.textContent+='\n✅ Training complete! Refreshing status...';
+      setTimeout(()=>checkStatus(false),1200);
+    } else {
+      log.textContent+='\n❌ Failed: '+(d.message||'Unknown error');
+      btn.disabled=false; btn.innerHTML='Retry Training';
+    }
+  } catch(e){
+    log.textContent+='\n❌ Request failed: '+e.message;
+    btn.disabled=false; btn.innerHTML='Retry Training';
+  }
+  log.scrollTop=log.scrollHeight;
+}
+
+function switchTab(n,el){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tc').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active'); document.getElementById('tc-'+n).classList.add('active');
+}
+function updateCC(el){const e=document.getElementById('cc');if(e)e.textContent=el.value.length+' / 500';}
+
+async function analyzeSingle(){
+  const msg=document.getElementById('sinput').value.trim();
+  hideErr('serr');
+  if(!msg){showErr('serr','Please enter a message first.');return;}
+  const btn=document.getElementById('abtn');
+  btn.disabled=true; btn.innerHTML='<span class="sp"></span>Analyzing...';
+  try{
+    const r=await fetch('/predict',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:msg})});
+    if(r.status===503){showErr('serr','Model not loaded. Click "Train Model Now" button above first.');return;}
+    const d=await r.json();
+    if(d.error){showErr('serr','Error: '+d.error);return;}
+    showResult(d); addHist(msg,d);
+  } catch{showErr('serr','Cannot reach server. Make sure START.bat is running.');}
+  finally{btn.disabled=false; btn.innerHTML='Analyze Intent';}
+}
+
+function showResult(d){
+  const card=document.getElementById('rcard'),isI=d.prediction===1;
+  card.className='rcard show '+(isI?'ri':'rn');
+  document.getElementById('vico').textContent=isI?'🛒':'💤';
+  document.getElementById('vlbl').textContent=d.label;
+  document.getElementById('vsub').textContent=isI?'Customer shows buying signals':'No purchase intent detected';
+  document.getElementById('confn').textContent=d.confidence+'%';
+  document.getElementById('cval').textContent=d.cleaned||'—';
+  setTimeout(()=>{
+    document.getElementById('br0').style.width=d.prob_0+'%'; document.getElementById('bp0').textContent=d.prob_0+'%';
+    document.getElementById('br1').style.width=d.prob_1+'%'; document.getElementById('bp1').textContent=d.prob_1+'%';
+  },60);
+}
+function clearSingle(){
+  document.getElementById('sinput').value=''; updateCC(document.getElementById('sinput'));
+  document.getElementById('rcard').className='rcard'; hideErr('serr');
+  document.getElementById('br0').style.width='0%'; document.getElementById('br1').style.width='0%';
+}
+
+async function analyzeBatch(){
+  const raw=document.getElementById('binput').value.trim();
+  hideErr('berr');
+  if(!raw){showErr('berr','Please enter at least one message.');return;}
+  const msgs=raw.split('\n').map(m=>m.trim()).filter(Boolean);
+  if(msgs.length>50){showErr('berr','Maximum 50 messages allowed.');return;}
+  const btn=document.getElementById('bbtn');
+  btn.disabled=true; btn.innerHTML='<span class="sp"></span>Analyzing '+msgs.length+' messages...';
+  document.getElementById('blist').innerHTML=''; document.getElementById('bstats').classList.remove('show');
+  try{
+    const r=await fetch('/batch',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({messages:msgs})});
+    if(r.status===503){showErr('berr','Model not loaded. Train the model first.');return;}
+    const d=await r.json();
+    if(d.error){showErr('berr','Error: '+d.error);return;}
+    showBatch(d.results);
+  } catch{showErr('berr','Cannot reach server. Make sure START.bat is running.');}
+  finally{btn.disabled=false; btn.innerHTML='Analyze All';}
+}
+function showBatch(results){
+  const list=document.getElementById('blist'),intC=results.filter(r=>r.prediction===1).length;
+  document.getElementById('st0').textContent=results.length;
+  document.getElementById('st1').textContent=intC;
+  document.getElementById('st2').textContent=results.length-intC;
+  document.getElementById('bstats').classList.add('show');
+  results.forEach((r,i)=>{
+    const isI=r.prediction===1,el=document.createElement('div');
+    el.className='bitem '+(isI?'bi':'bn'); el.style.animationDelay=(i*.03)+'s';
+    el.innerHTML=`<div class="bico">${isI?'🛒':'💤'}</div><div class="bmsg">${esc(r.message)}</div><div class="bcnf">${r.confidence}%</div>`;
+    list.appendChild(el);
+  });
+}
+function clearBatch(){
+  document.getElementById('binput').value=''; document.getElementById('blist').innerHTML='';
+  document.getElementById('bstats').classList.remove('show'); hideErr('berr');
+}
+
+function addHist(msg,d){
+  hist.unshift({msg,p:d.prediction,c:d.confidence});
+  if(hist.length>20)hist=hist.slice(0,20);
+  try{localStorage.setItem('bs_hist',JSON.stringify(hist));}catch{}
+  renderHist();
+}
+function renderHist(){
+  const sec=document.getElementById('hsec'),list=document.getElementById('hlist');
+  if(!hist.length){sec.classList.remove('show');return;}
+  sec.classList.add('show'); list.innerHTML='';
+  hist.forEach(h=>{
+    const el=document.createElement('div'); el.className='hitem';
+    el.onclick=()=>{document.getElementById('sinput').value=h.msg;updateCC(document.getElementById('sinput'));window.scrollTo({top:0,behavior:'smooth'});};
+    el.innerHTML=`<div class="hdot2 ${h.p===1?'g':'r'}"></div><div class="hmsg">${esc(h.msg)}</div><div class="hpct">${h.c}%</div>`;
+    list.appendChild(el);
+  });
+}
+function clearHist(){hist=[];try{localStorage.removeItem('bs_hist');}catch{}renderHist();}
+
+function showErr(id,m){const e=document.getElementById(id);e.textContent='⚠ '+m;e.className='err show';}
+function hideErr(id){document.getElementById(id).className='err';}
+function esc(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+document.addEventListener('keydown',e=>{
+  if(e.ctrlKey&&e.key==='Enter'){
+    if(document.getElementById('tc-single').classList.contains('active'))analyzeSingle();
+    else analyzeBatch();
+  }
+});
+</script>
+</body>
+</html>
